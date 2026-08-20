@@ -1,6 +1,6 @@
 torch>=2.0
-gymnasium[mujoco]>=0.28.1
-safety-gymnasium
+gymnasium[mujoco]
+# safety-gymnasium  # Optional: only required for SafetyAntVelocity-v1 (requires Python 3.8-3.11)
 stable-baselines3
 numpy
 matplotlib
