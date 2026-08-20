@@ -45,20 +45,23 @@ def make_env(env_id: str, seed: int = 0):
     return env
 
 
-from envs.safety_wrappers import CostWrapper
+from envs.safety_wrappers import CostWrapper, make_safety_ant_velocity
 
 
 def make_safety_env(env_id: str, seed: int = 0):
     """
-    Create and seed a safety-gymnasium environment (e.g. SafetyAntVelocity-v1).
-    Wraps it in CostWrapper to expose cost signal in info['cost'].
+    Create and seed a safety environment (e.g. SafetyAntVelocity-v1).
+    Attempts safety-gymnasium first; falls back to native Ant-v5 + VelocityCostWrapper
+    so safety tasks run seamlessly on standard Gymnasium 1.x without version conflicts.
     """
     try:
         import safety_gymnasium
         env = safety_gymnasium.make(env_id)
         env.reset(seed=seed)
         return CostWrapper(env)
-    except ImportError:
+    except Exception:
+        if "Ant" in env_id or env_id == "SafetyAntVelocity-v1":
+            return make_safety_ant_velocity(seed=seed)
         try:
             env = gym.make(env_id)
             env.reset(seed=seed)
@@ -66,5 +69,5 @@ def make_safety_env(env_id: str, seed: int = 0):
         except Exception as e:
             raise RuntimeError(
                 f"Could not load safety environment '{env_id}'. "
-                f"Please ensure safety-gymnasium is installed (pip install safety-gymnasium). Error: {e}"
+                f"For Ant safety tasks, Ant-v5 fallback was attempted. Error: {e}"
             )

@@ -32,17 +32,22 @@ RESULTS_CKPT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 def run_eval_episodes(env, agent, n_episodes: int = 5, deterministic: bool = True):
     """Run a few episodes with the current policy (no exploration noise, no learning)."""
     returns = []
+    costs = []
     for _ in range(n_episodes):
         obs, _ = env.reset()
         done = False
         ep_return = 0.0
+        ep_cost = 0.0
         while not done:
             action = agent.select_action(obs, deterministic=deterministic)
-            obs, reward, terminated, truncated, _ = env.step(action)
+            obs, reward, terminated, truncated, info = env.step(action)
             ep_return += reward
+            if isinstance(info, dict) and "cost" in info:
+                ep_cost += float(info["cost"])
             done = terminated or truncated
         returns.append(ep_return)
-    return float(np.mean(returns)), float(np.std(returns))
+        costs.append(ep_cost)
+    return float(np.mean(returns)), float(np.std(returns)), float(np.mean(costs))
 
 
 def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None):
@@ -84,7 +89,7 @@ def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None)
     start_steps = cfg.get("start_steps", min(10_000, total_timesteps // 10))
     reward_scale = cfg.get("reward_scale", 1.0)  # ablation axis 4: reward scaling
 
-    log_history = {"steps": [], "eval_reward_mean": [], "eval_reward_std": [], "update_metrics": []}
+    log_history = {"steps": [], "eval_reward_mean": [], "eval_reward_std": [], "eval_cost_mean": [], "update_metrics": []}
 
     obs, _ = env.reset(seed=cfg["seed"])
     start_time = time.time()
@@ -115,16 +120,18 @@ def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None)
 
         if t % eval_every == 0 or t == total_timesteps:
             deterministic_eval = cfg.get("deterministic_eval", True)
-            eval_mean, eval_std = run_eval_episodes(
+            eval_mean, eval_std, eval_cost = run_eval_episodes(
                 eval_env, agent, n_episodes=cfg.get("eval_episodes", 5), deterministic=deterministic_eval
             )
             elapsed = time.time() - start_time
-            print(f"[train] step={t}/{total_timesteps} eval_reward={eval_mean:.2f}±{eval_std:.2f} "
+            cost_str = f" eval_cost={eval_cost:.1f}" if cfg.get("is_safety_env") else ""
+            print(f"[train] step={t}/{total_timesteps} eval_reward={eval_mean:.2f}±{eval_std:.2f}{cost_str} "
                   f"alpha={agent.alpha:.4f} elapsed={elapsed:.1f}s")
 
             log_history["steps"].append(t)
             log_history["eval_reward_mean"].append(eval_mean)
             log_history["eval_reward_std"].append(eval_std)
+            log_history["eval_cost_mean"].append(eval_cost)
             log_history["update_metrics"].append(metrics)
 
             os.makedirs(RESULTS_LOG_DIR, exist_ok=True)
