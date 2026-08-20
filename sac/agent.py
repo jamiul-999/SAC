@@ -16,6 +16,7 @@ import copy
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 from sac.networks import GaussianPolicy, QNetwork
 
