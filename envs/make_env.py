@@ -14,24 +14,33 @@ import gymnasium as gym
 
 STANDARD_ENV_KWARGS = {
     "HalfCheetah-v5": {},
+    "HalfCheetah-v4": {},
     "Walker2d-v5": {},
+    "Walker2d-v4": {},
     "Ant-v5": {"include_cfrc_ext_in_observation": False},
+    "Ant-v4": {},
 }
 
 
 def make_env(env_id: str, seed: int = 0):
     """
     Create and seed a standard (non-safety) Gymnasium environment.
-    For safety envs, use make_safety_env below instead.
+    Supports automatic fallback between -v5 and -v4 depending on installed Gymnasium version.
     """
     if env_id not in STANDARD_ENV_KWARGS:
         raise ValueError(
             f"Unrecognized standard env_id '{env_id}'. "
-            f"Known: {list(STANDARD_ENV_KWARGS.keys())}. "
-            "If adding a new env, use its current (non-deprecated) version string."
+            f"Known: {list(STANDARD_ENV_KWARGS.keys())}."
         )
     kwargs = STANDARD_ENV_KWARGS[env_id]
-    env = gym.make(env_id, **kwargs)
+    try:
+        env = gym.make(env_id, **kwargs)
+    except Exception:
+        # Fallback between -v5 and -v4 depending on gymnasium version installed
+        fallback_id = env_id.replace("-v5", "-v4") if "-v5" in env_id else env_id.replace("-v4", "-v5")
+        fallback_kwargs = STANDARD_ENV_KWARGS.get(fallback_id, {})
+        env = gym.make(fallback_id, **fallback_kwargs)
+
     env.reset(seed=seed)
     return env
 
