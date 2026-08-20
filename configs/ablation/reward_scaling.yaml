@@ -1,0 +1,11 @@
+# Reward scaling ablation (axis 4 of 4).
+# Run under FIXED alpha (auto_tune_alpha: false) -- auto-tuning is designed to
+# absorb reward-scale sensitivity, so sweeping reward scale under the auto-tuned
+# variant would not isolate the effect being tested here.
+
+base_config: configs/halfcheetah_base.yaml
+override:
+  auto_tune_alpha: false
+  alpha: 0.2
+sweep_param: reward_scale
+sweep_values: [1, 5, 10, 20]

@@ -1,0 +1,16 @@
+env_id: SafetyAntVelocity-v1   # confirm exact string against installed safety-gymnasium version
+is_safety_env: true
+cost_limit: 25                 # episodic cost budget, standard in safe-RL literature
+seed: 0
+gamma: 0.99
+tau: 0.005
+lr_actor: 3.0e-4
+lr_critic: 3.0e-4
+alpha: 0.2
+auto_tune_alpha: true
+use_twin_q: true
+hidden_dim: 256
+batch_size: 256
+buffer_capacity: 1000000
+total_timesteps: 1000000
+eval_every: 10000

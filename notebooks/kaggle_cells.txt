@@ -1,0 +1,30 @@
+Paste these as separate cells in a new Kaggle Notebook (Settings -> Accelerator -> GPU T4 x2).
+
+--- CELL 1 (setup) ---
+!git clone https://github.com/<your-username>/rl-sac-project.git
+%cd rl-sac-project
+!pip install -r requirements.txt -q
+
+--- CELL 2 (sanity check -- confirms GPU is visible and env loads) ---
+import torch
+print("CUDA available:", torch.cuda.is_available())
+
+!python scripts/validate_against_sb3.py HalfCheetah-v5 20000
+
+--- CELL 3 (smoke test your own SAC before a long run) ---
+!python scripts/train.py --config configs/halfcheetah_base.yaml --total-timesteps-override 2000
+
+--- CELL 4 (real training run) ---
+!python scripts/train.py --config configs/halfcheetah_base.yaml
+# swap the config path for walker2d_base.yaml / ant_base.yaml as needed
+
+--- CELL 5 (ablation sweep -- runs all values in one call) ---
+!python -m scripts.run_ablation --ablation configs/ablation/alpha_sweep.yaml
+
+--- CELL 6 (pull results back down, since Kaggle can't push to GitHub mid-session) ---
+# Download results/logs/*.json and results/checkpoints/*.pt from the Kaggle
+# output panel (right sidebar), or zip them:
+import shutil
+shutil.make_archive("/kaggle/working/results_bundle", "zip", "results")
+# then download results_bundle.zip from the output panel, and commit the
+# contents into your local results/ folder + git push from your own machine.

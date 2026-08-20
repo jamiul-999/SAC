@@ -1,0 +1,5 @@
+# Twin vs. single Q-network ablation (axis 3 of 4).
+
+base_config: configs/halfcheetah_base.yaml
+sweep_param: use_twin_q
+sweep_values: [true, false]

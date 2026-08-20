@@ -1,0 +1,6 @@
+# Stochastic vs. deterministic policy ablation (axis 2 of 4).
+# Reproduces the paper's own Figure 2 comparison.
+
+base_config: configs/halfcheetah_base.yaml
+sweep_param: deterministic_eval   # eval-time action selection, see sac/agent.py select_action()
+sweep_values: [false, true]

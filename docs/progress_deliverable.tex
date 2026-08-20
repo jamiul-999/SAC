@@ -1,0 +1,86 @@
+\documentclass[10pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{times}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+\titleformat{\section}{\normalfont\bfseries\large}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\bfseries}{\thesubsection}{1em}{}
+
+\begin{document}
+
+\begin{center}
+{\Large \bfseries Problem Definition, Baseline Results, and Challenges}\\[4pt]
+\normalsize [Name 1], [Name 2], [Name 3] \\
+Reinforcement Learning Course Project
+\end{center}
+
+\section*{1. Problem Definition: MDP Specifications}
+
+We formalize each environment used in this project as a Markov Decision Process $(\mathcal{S}, \mathcal{A}, P, R, \gamma)$, or as a Constrained MDP $(\mathcal{S}, \mathcal{A}, P, R, C, \gamma, d)$ for the safety-augmented environment.
+
+\subsection*{HalfCheetah-v5 (standard control)}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item \textbf{State} $\mathcal{S} \subset \mathbb{R}^{17}$: joint positions (excluding global x-coordinate) and joint velocities of the cheetah's body.
+    \item \textbf{Action} $\mathcal{A} \subset [-1,1]^6$: continuous torque applied to each of 6 actuated joints.
+    \item \textbf{Transition} $P$: implicit, governed by MuJoCo rigid-body physics simulation.
+    \item \textbf{Reward}: forward velocity reward minus a control-cost penalty on action magnitude. No early termination.
+    \item \textbf{Episode length}: 1000 timesteps. \quad \textbf{$\gamma$}: 0.99.
+\end{itemize}
+
+\subsection*{Walker2d-v5 (standard control)}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item \textbf{State} $\mathcal{S} \subset \mathbb{R}^{17}$: joint positions and velocities of the bipedal walker.
+    \item \textbf{Action} $\mathcal{A} \subset [-1,1]^6$: torque on 6 joints (thigh, leg, foot $\times$ 2 legs).
+    \item \textbf{Transition} $P$: implicit MuJoCo physics.
+    \item \textbf{Reward}: healthy-alive bonus plus forward velocity reward minus control cost.
+    \item \textbf{Episode length}: 1000 timesteps, or early termination if the walker falls. \quad \textbf{$\gamma$}: 0.99.
+\end{itemize}
+
+\subsection*{Ant-v5 (standard control)}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item \textbf{State} $\mathcal{S} \subset \mathbb{R}^{27}$: joint positions and velocities of the 4-legged ant (configured with \texttt{include\_cfrc\_ext\_in\_observation=False} to match original 27-dim specification).
+    \item \textbf{Action} $\mathcal{A} \subset [-1,1]^8$: torque on 8 joints (2 per leg $\times$ 4 legs).
+    \item \textbf{Transition} $P$: implicit MuJoCo physics.
+    \item \textbf{Reward}: forward velocity reward plus healthy-alive bonus, minus control cost and contact cost.
+    \item \textbf{Episode length}: 1000 timesteps, or early termination if the ant falls. \quad \textbf{$\gamma$}: 0.99.
+\end{itemize}
+
+\subsection*{SafetyAntVelocity-v1 (safety-constrained, CMDP)}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item \textbf{State, Action, Transition}: identical to Ant-v5 --- same robot body, same physics.
+    \item \textbf{Reward} $R$: same forward-velocity-based task reward as Ant-v5.
+    \item \textbf{Cost} $C \geq 0$: a unit cost incurred at each timestep the agent's velocity exceeds a fixed safety threshold, simulating an operational speed limit.
+    \item \textbf{Cost budget} $d$: episodic cost limit, commonly set to 25 in the safe-RL literature.
+    \item \textbf{Episode length}: 1000 timesteps, or early termination on fall. \quad \textbf{$\gamma$}: 0.99.
+\end{itemize}
+
+Ant-v5 and SafetyAntVelocity-v1 share identical state space, action space, and dynamics --- the only difference is the added cost signal and velocity constraint, giving a controlled comparison isolating the effect of the safety constraint.
+
+\section*{2. Baseline Implementation and Preliminary Results}
+
+As a preliminary baseline, we trained Stable-Baselines3's SAC implementation (a well-tested reference, not our own reproduction) on \texttt{HalfCheetah-v5} and \texttt{Ant-v5} for a short budget of 15{,}000 environment steps each, to sanity-check environment setup and establish a reference point before implementing our own SAC from scratch.
+
+\begin{center}
+\includegraphics[width=0.95\textwidth]{sb3_baseline_curves.png}
+\end{center}
+
+At this short budget, neither environment shows convergence yet --- this is expected, since SAC on these tasks typically requires on the order of $10^6$ steps to reach strong performance. HalfCheetah-v5 completed 14 episodes (1000-step fixed horizon, no early termination); Ant-v5 completed 62 shorter episodes due to early termination on falls, consistent with the MDP specification above. These runs confirm our environment setup, observation/action space dimensions, and training pipeline are correct, and establish a reference point for validating our own SAC implementation in subsequent weeks.
+
+\section*{3. Challenges}
+
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item \textbf{Compute constraints}: training was run on limited free-tier compute; the baseline results above are intentionally short-budget and not representative of converged performance. Full baseline and ablation runs will require more extensive GPU time (planned via Kaggle's free GPU allocation).
+    \item \textbf{Environment installation}: \texttt{safety-gymnasium} (required for \texttt{SafetyAntVelocity-v1}) has not yet been fully verified in our team's compute environment; this is in progress and will be resolved before the Week 7 progress report.
+    \item \textbf{Team ramp-up}: as this is the team's first hands-on RL implementation project, initial time was spent establishing a shared code structure and workflow (Git-based repository with Kaggle for GPU execution) to support collaborative development across the remaining milestones.
+\end{itemize}
+
+\end{document}

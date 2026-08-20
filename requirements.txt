@@ -1,0 +1,8 @@
+torch>=2.0
+gymnasium[mujoco]>=0.29
+safety-gymnasium
+stable-baselines3
+numpy
+matplotlib
+pyyaml
+pytest
