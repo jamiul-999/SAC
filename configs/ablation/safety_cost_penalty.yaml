@@ -1,0 +1,9 @@
+# Safety cost penalty ablation (axis 6 - CMDP).
+# Runs on SafetyAntVelocity-v1. Sweeps penalty multiplier lambda in:
+# R_adjusted = R - lambda * cost
+# Testing unconstrained SAC (lambda=0.0) vs varying penalty strengths.
+
+base_config: configs/safety_ant_velocity_base.yaml
+sweep_param: cost_penalty
+sweep_values: [0.0, 1.0, 5.0, 10.0]
+
