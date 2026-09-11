@@ -1,0 +1,9 @@
+# Target entropy ablation (axis 5).
+# Investigates sensitivity to the target entropy heuristic H_target = -|A|.
+# For HalfCheetah-v5 (|A| = 6), -6.0 is the standard heuristic.
+# We sweep [-3.0, -6.0, -9.0, -12.0] representing [0.5x, 1.0x, 1.5x, 2.0x] scaling.
+
+base_config: configs/halfcheetah_base.yaml
+sweep_param: target_entropy
+sweep_values: [-3.0, -6.0, -9.0, -12.0]
+
