@@ -34,6 +34,7 @@ class SACAgent:
         alpha: float = 0.2,
         auto_tune_alpha: bool = True,
         use_twin_q: bool = True,   # ablation axis: twin vs. single Q-network
+        target_entropy: float = None,  # configurable target entropy for ablation
         device: str = "cpu",
     ):
         self.gamma = gamma
@@ -61,10 +62,11 @@ class SACAgent:
         else:
             self.q2 = None
 
+        # Target entropy heuristic from the SAC follow-up paper (Haarnoja et al. 2018b):
+        # -|A|, i.e. negative of the action dimensionality, unless explicitly overridden.
+        self.target_entropy = float(target_entropy) if target_entropy is not None else -float(act_dim)
+
         if auto_tune_alpha:
-            # Target entropy heuristic from the SAC follow-up paper (Haarnoja et al. 2018b):
-            # -|A|, i.e. negative of the action dimensionality.
-            self.target_entropy = -float(act_dim)
             init_log_alpha = float(np.log(max(alpha, 1e-6)))
             self.log_alpha = torch.tensor([init_log_alpha], requires_grad=True, device=device, dtype=torch.float32)
             self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=lr_actor)
@@ -132,6 +134,7 @@ class SACAgent:
         self.q1_optim.step()
 
         q2_loss_val = 0.0
+        q2_mean_val = 0.0
         if self.use_twin_q:
             q2_pred = self.q2(obs, action)
             q2_loss = F.mse_loss(q2_pred, q_target)
@@ -139,6 +142,7 @@ class SACAgent:
             q2_loss.backward()
             self.q2_optim.step()
             q2_loss_val = q2_loss.item()
+            q2_mean_val = q2_pred.mean().item()
 
         # --- 2. Policy update (reparameterized, gradients flow through sampled action) ---
         new_action, log_prob, _ = self.policy.sample(obs)
@@ -167,6 +171,9 @@ class SACAgent:
             "policy_loss": policy_loss.item(),
             "alpha_loss": alpha_loss_val,
             "alpha": self.alpha,
+            "q1_mean": q1_pred.mean().item(),
+            "q2_mean": q2_mean_val,
+            "target_q_mean": target_value.mean().item(),
         }
 
     def _soft_update_targets(self):
