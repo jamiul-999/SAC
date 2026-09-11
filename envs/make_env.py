@@ -48,7 +48,7 @@ def make_env(env_id: str, seed: int = 0):
 from envs.safety_wrappers import CostWrapper, make_safety_ant_velocity
 
 
-def make_safety_env(env_id: str, seed: int = 0):
+def make_safety_env(env_id: str, seed: int = 0, velocity_threshold: float = 2.0):
     """
     Create and seed a safety environment (e.g. SafetyAntVelocity-v1).
     Attempts safety-gymnasium first; falls back to native Ant-v5 + VelocityCostWrapper
@@ -61,7 +61,7 @@ def make_safety_env(env_id: str, seed: int = 0):
         return CostWrapper(env)
     except Exception:
         if "Ant" in env_id or env_id == "SafetyAntVelocity-v1":
-            return make_safety_ant_velocity(seed=seed)
+            return make_safety_ant_velocity(seed=seed, velocity_threshold=velocity_threshold)
         try:
             env = gym.make(env_id)
             env.reset(seed=seed)
