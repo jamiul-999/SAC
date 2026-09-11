@@ -59,9 +59,12 @@ def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[train] run_name={run_name} env={cfg['env_id']} device={device} total_timesteps={total_timesteps}")
 
+    velocity_threshold = cfg.get("velocity_threshold", 2.0)
+    cost_penalty = cfg.get("cost_penalty", 0.0)
+
     if cfg.get("is_safety_env"):
-        env = make_safety_env(cfg["env_id"], seed=cfg["seed"])
-        eval_env = make_safety_env(cfg["env_id"], seed=cfg["seed"] + 1000)
+        env = make_safety_env(cfg["env_id"], seed=cfg["seed"], velocity_threshold=velocity_threshold)
+        eval_env = make_safety_env(cfg["env_id"], seed=cfg["seed"] + 1000, velocity_threshold=velocity_threshold)
     else:
         env = make_env(cfg["env_id"], seed=cfg["seed"])
         eval_env = make_env(cfg["env_id"], seed=cfg["seed"] + 1000)
@@ -80,6 +83,7 @@ def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None)
         alpha=cfg["alpha"],
         auto_tune_alpha=cfg["auto_tune_alpha"],
         use_twin_q=cfg.get("use_twin_q", True),
+        target_entropy=cfg.get("target_entropy", None),
         device=device,
     )
     buffer = ReplayBuffer(obs_dim, act_dim, capacity=cfg["buffer_capacity"])
@@ -100,13 +104,18 @@ def run_training(cfg: dict, run_name: str, total_timesteps_override: int = None)
         else:
             action = agent.select_action(obs, deterministic=False)
 
-        next_obs, reward, terminated, truncated, _ = env.step(action)
+        next_obs, reward, terminated, truncated, info = env.step(action)
         done = terminated or truncated
+
+        cost = 0.0
+        if isinstance(info, dict) and "cost" in info:
+            cost = float(info["cost"])
+        effective_reward = (reward - cost_penalty * cost) * reward_scale
 
         # Only bootstrap-zero on true termination, not on time-limit truncation
         # (standard practice -- truncation is an artifact of the episode horizon,
         # not a signal that no future reward was possible).
-        buffer.add(obs, action, reward * reward_scale, next_obs, float(terminated))
+        buffer.add(obs, action, effective_reward, next_obs, float(terminated))
 
         obs = next_obs
         if done:
