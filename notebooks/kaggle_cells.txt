@@ -18,12 +18,21 @@ print("CUDA available:", torch.cuda.is_available())
 !python scripts/train.py --config configs/halfcheetah_base.yaml
 # swap the config path for walker2d_base.yaml / ant_base.yaml as needed
 
---- CELL 5 (ablation sweep -- runs all values in one call) ---
-!python -m scripts.run_ablation --ablation configs/ablation/alpha_sweep.yaml
+--- CELL 5 (ablation sweep -- run individual or all ablations) ---
+# Inspect dry-run plan
+!python scripts/run_ablation.py --all --dry-run
 
---- CELL 6 (pull results back down, since Kaggle can't push to GitHub mid-session) ---
-# Download results/logs/*.json and results/checkpoints/*.pt from the Kaggle
-# output panel (right sidebar), or zip them:
+# Option A: Run all 6 ablation sweeps with resume capability
+!python scripts/run_ablation.py --all --skip-existing
+
+# Option B: Run a specific ablation sweep (e.g. Twin Q vs Single Q with 3 seeds)
+# !python scripts/run_ablation.py --ablation configs/ablation/twin_vs_single_q.yaml --seeds 0 1 2 --skip-existing
+
+--- CELL 6 (generate plots & comparative tables) ---
+!python scripts/plot_results.py
+
+--- CELL 7 (pull results back down, since Kaggle can't push to GitHub mid-session) ---
+# Download results/logs/*.json, results/plots/*.png, and results/ablation_summary.*
 import shutil
 shutil.make_archive("/kaggle/working/results_bundle", "zip", "results")
 # then download results_bundle.zip from the output panel, and commit the
