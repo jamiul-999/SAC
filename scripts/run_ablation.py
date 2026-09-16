@@ -1,13 +1,12 @@
 """
-Run an ablation sweep: reads one or more ablation configs (e.g. configs/ablation/*.yaml),
-launches training runs across parameter values and optional seeds, calling train.run_training()
-directly (no subprocess overhead).
+Run the four planned SAC ablation axes: reads ablation configs, launches training runs
+across parameter values and optional seeds, calling train.run_training() directly.
 
 Usage:
     # Run a single ablation
     python scripts/run_ablation.py --ablation configs/ablation/alpha_sweep.yaml
 
-    # Run all ablations
+    # Run all four planned ablations
     python scripts/run_ablation.py --all
     python scripts/run_ablation.py --ablation all
 
@@ -41,18 +40,29 @@ DEFAULT_ABLATION_DIR = os.path.join(PROJECT_ROOT, "configs", "ablation")
 RESULTS_LOG_DIR = os.path.join(PROJECT_ROOT, "results", "logs")
 MANIFEST_PATH = os.path.join(PROJECT_ROOT, "results", "ablation_manifest.json")
 
+# These are the four ablation axes specified in the SAC update's remaining-work section.
+# Other exploratory configs remain available through explicit --ablation paths.
+CANONICAL_ABLATIONS = (
+    "alpha_sweep.yaml",
+    "stochastic_vs_det.yaml",
+    "twin_vs_single_q.yaml",
+    "reward_scaling.yaml",
+)
+
 
 def resolve_ablation_files(ablation_inputs, run_all: bool = False):
     """Resolve input paths into a clean list of ablation YAML config paths."""
     if run_all or (ablation_inputs and "all" in [str(x).lower() for x in ablation_inputs]):
-        pattern = os.path.join(DEFAULT_ABLATION_DIR, "*.yaml")
-        files = sorted(glob.glob(pattern))
-        if not files:
-            raise FileNotFoundError(f"No ablation configs found in {DEFAULT_ABLATION_DIR}")
+        files = [os.path.join(DEFAULT_ABLATION_DIR, name) for name in CANONICAL_ABLATIONS]
+        missing = [path for path in files if not os.path.isfile(path)]
+        if missing:
+            raise FileNotFoundError(
+                "Missing canonical ablation config(s): " + ", ".join(missing)
+            )
         return files
 
     if not ablation_inputs:
-        raise ValueError("Please specify --ablation <path> or use --all to run all ablations.")
+        raise ValueError("Please specify --ablation <path> or use --all to run the four planned ablations.")
 
     resolved = []
     for item in ablation_inputs:
@@ -167,9 +177,9 @@ def update_manifest(run_name: str, record: dict):
 def main():
     parser = argparse.ArgumentParser(description="SAC Ablation Experiment Runner")
     parser.add_argument("--ablation", nargs="*", default=None,
-                        help="Path(s) to ablation config(s), or 'all' to run all.")
+                        help="Path(s) to ablation config(s), or 'all' to run the four planned axes.")
     parser.add_argument("--all", action="store_true",
-                        help="Run all ablation configs in configs/ablation/")
+                        help="Run the four planned ablation configs in configs/ablation/.")
     parser.add_argument("--seeds", type=int, nargs="+", default=None,
                         help="List of random seeds (e.g. --seeds 0 1 2).")
     parser.add_argument("--env-id", default=None,
